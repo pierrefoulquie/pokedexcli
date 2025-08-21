@@ -15,11 +15,39 @@ const BASE_URL = "https://pokeapi.co/api/v2/location-area/"
 func NewClient(base_url string, interval time.Duration) (*PokeAPIClient, error){
 	client := PokeAPIClient{}
 	client.baseURL = base_url
+	client.Enc = Encounters{}
 	client.cache =  pokecache.NewCache(interval)
 	if err:= client.FetchBaseLocationArea(); err!=nil{
 		return &client, err
 	}
 	return &client, nil
+}
+
+func (c *PokeAPIClient) FetchEncounters(url string) error{
+	fmt.Println("Exploring "+url+"...")
+	endpoint := BASE_URL+url
+	res, err := http.Get(endpoint)
+	if err!=nil{
+		return err
+	}
+	defer res.Body.Close()
+	val,err := io.ReadAll(res.Body)
+	if err!=nil{
+		return err
+	}
+	marshErr := json.Unmarshal(val, &c.Enc)
+	if marshErr!=nil{
+		return marshErr
+	}
+	numPokemon := len(c.Enc.PokemonEncounters)
+	if numPokemon == 0{
+		fmt.Println("No Pokemon found")
+		return  nil
+	}
+	for i:=0; i<numPokemon; i++{
+		fmt.Printf(" - %v\n",c.Enc.PokemonEncounters[i].Pokemon.Name)
+	}
+	return nil
 }
 
 func (c *PokeAPIClient) FetchLocationAreas(url string) error{

@@ -1,6 +1,5 @@
 package pokecache
 import(
-	"fmt"
 	"time"
 	"sync"
 )
@@ -32,7 +31,6 @@ func (c *Cache) Add (key string, val []byte){
 	entry.createdAt = time.Now()
 	entry.val = val
 	c.CacheMap[key] = entry
-	fmt.Println("### DATA CACHED ###")
 }
 
 func (c *Cache) Get (key string) (val []byte, found bool){
@@ -40,7 +38,6 @@ func (c *Cache) Get (key string) (val []byte, found bool){
 	defer c.Mu.RUnlock()
 
 	if entry, ok := c.CacheMap[key]; ok{
-		fmt.Println("### DATA EXTRACTED FROM THE CACHE ###")
 		return entry.val, ok
 	}
 	return []byte{}, false

@@ -17,16 +17,17 @@ func cleanInput(text string) []string{
 type cliCommand struct{
 	name 		string
 	description string
-	callback 	func(*pokeapi.PokeAPIClient) error
+	callback 	func(*pokeapi.PokeAPIClient, string) error
+	arg0 		string
 }
 
-func commandExit(c *pokeapi.PokeAPIClient) error{
+func commandExit(c *pokeapi.PokeAPIClient, arg0 string) error{
 	fmt.Print("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(c *pokeapi.PokeAPIClient) error{
+func commandHelp(c *pokeapi.PokeAPIClient, arg0 string) error{
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("help: Displays a help message")
@@ -36,7 +37,7 @@ func commandHelp(c *pokeapi.PokeAPIClient) error{
 	return nil
 }
 
-func commandMap(c *pokeapi.PokeAPIClient) error{
+func commandMap(c *pokeapi.PokeAPIClient, arg0 string) error{
 	c.FetchNextLocationArea()
 	for i:=0;i<len(c.Res.Results);i++{
 		fmt.Println(c.Res.Results[i].Name)
@@ -51,7 +52,7 @@ func commandMap(c *pokeapi.PokeAPIClient) error{
 	return nil
 }
 
-func commandMapb(c *pokeapi.PokeAPIClient) error{
+func commandMapb(c *pokeapi.PokeAPIClient, arg0 string) error{
 	first, err := c.DetectFirstPage()
 	if err!=nil{
 		return err
@@ -78,7 +79,19 @@ func commandMapb(c *pokeapi.PokeAPIClient) error{
 	return nil
 }
 
+func commandExplore(c *pokeapi.PokeAPIClient, arg0 string) error{
+	if err := c.FetchEncounters(arg0); err!=nil{
+		fmt.Println(err)
+	}
+	return nil
+}
+
 var commands = map[string]cliCommand{
+	"explore":{
+        name:        "explore",
+        description: "Displays Pokemons presents in the area",
+        callback:    commandExplore,
+	},
     "exit": {
         name:        "exit",
         description: "Exit the Pokedex",
@@ -86,17 +99,17 @@ var commands = map[string]cliCommand{
     },
     "help": {
         name:        "help",
-        description: "Display Pokedex Manual",
+        description: "Displays Pokedex Manual",
         callback:    commandHelp,
     },
     "map": {
         name:        "map",
-        description: "displays 20 next Pokemon world cities",
+        description: "Displays 20 next Pokemon world areas",
         callback:    commandMap,
     },
     "mapb": {
         name:        "mapb",
-        description: "displays 20 previous Pokemon world cities",
+        description: "Displays 20 previous Pokemon world areas",
         callback:    commandMapb,
     },
 }
@@ -104,6 +117,7 @@ var commands = map[string]cliCommand{
 func main(){
 	scanner := bufio.NewScanner(os.Stdin)
 	client, clErr := pokeapi.NewClient(pokeapi.BASE_URL, 10*time.Second)
+	arg0 := ""
 	if clErr!=nil{
 		log.Fatal()
 	}
@@ -117,13 +131,19 @@ func main(){
 				fmt.Println("Error: enpty command")
 				continue
 			}
-			clean_string :=  cleanInput(text)
-			first_word := strings.ToLower(clean_string[0])
-			if _,ok := commands[first_word]; !ok{
+			cleanString :=  cleanInput(text)
+			firstWord := strings.ToLower(cleanString[0])
+			if _,ok := commands[firstWord]; !ok{
 				fmt.Println("Error: command unknown")
 				continue
 			}
-			if err := commands[first_word].callback(client); err!=nil{
+			if firstWord == "explore" && len(cleanString) < 2{
+				fmt.Println("Error: missing argument")
+				continue
+			}else if firstWord == "explore"{
+				arg0 = cleanString[1]
+			}
+			if err := commands[firstWord].callback(client, arg0); err!=nil{
 				fmt.Println("Error:",err)
 			}
 		}
