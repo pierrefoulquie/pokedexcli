@@ -86,7 +86,22 @@ func commandExplore(c *pokeapi.PokeAPIClient, arg0 string) error{
 	return nil
 }
 
+func commandCatch(c *pokeapi.PokeAPIClient, arg0 string) error{
+	for _, poke := range c.Enc.PokemonEncounters{
+		if poke.Pokemon.Name == arg0 {
+			fmt.Printf("Throwing a pokeball at %v\n", arg0)
+			return nil
+		}
+	}
+	fmt.Println("Pokemon not found")
+	return nil
+}
 var commands = map[string]cliCommand{
+	"catch":{
+        name:        "catch",
+        description: "Throw a pokeball at a pokemon",
+        callback:    commandCatch,
+	},
 	"explore":{
         name:        "explore",
         description: "Displays Pokemons presents in the area",
@@ -137,11 +152,11 @@ func main(){
 				fmt.Println("Error: command unknown")
 				continue
 			}
-			if firstWord == "explore" && len(cleanString) < 2{
+			if (firstWord == "explore" || firstWord == "catch") && len(cleanString) < 2{
 				fmt.Println("Error: missing argument")
 				continue
-			}else if firstWord == "explore"{
-				arg0 = cleanString[1]
+			}else if firstWord == "explore" || firstWord == "catch"{
+				arg0 = strings.ToLower(cleanString[1])
 			}
 			if err := commands[firstWord].callback(client, arg0); err!=nil{
 				fmt.Println("Error:",err)
