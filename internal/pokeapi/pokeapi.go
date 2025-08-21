@@ -26,26 +26,42 @@ func NewClient(base_url string, interval time.Duration) (*PokeAPIClient, error){
 func (c *PokeAPIClient) FetchEncounters(url string) error{
 	fmt.Println("Exploring "+url+"...")
 	endpoint := BASE_URL+url
-	res, err := http.Get(endpoint)
-	if err!=nil{
-		return err
+
+	//if the data is already cached, unmarshal from the cache
+	if val, ok:= c.cache.Get(endpoint); ok{
+		if err := json.Unmarshal(val, &c.Enc); err!=nil{
+			return err
+		}
+	//if not, http request and unmarshal
+	}else{
+		//get data through http request
+		res, err := http.Get(endpoint)
+		if err!=nil{
+			return err
+		}
+		defer res.Body.Close()
+		val,err := io.ReadAll(res.Body)
+		if err!=nil{
+			return err
+		}
+		//cache the data
+		c.cache.Add(endpoint, val)
+
+		//unmarshal the data
+		marshErr := json.Unmarshal(val, &c.Enc)
+		if marshErr!=nil{
+			return marshErr
+		}
 	}
-	defer res.Body.Close()
-	val,err := io.ReadAll(res.Body)
-	if err!=nil{
-		return err
-	}
-	marshErr := json.Unmarshal(val, &c.Enc)
-	if marshErr!=nil{
-		return marshErr
-	}
+
+	//print result
 	numPokemon := len(c.Enc.PokemonEncounters)
 	if numPokemon == 0{
 		fmt.Println("No Pokemon found")
 		return  nil
 	}
-	for i:=0; i<numPokemon; i++{
-		fmt.Printf(" - %v\n",c.Enc.PokemonEncounters[i].Pokemon.Name)
+	for _, poke := range c.Enc.PokemonEncounters{
+		fmt.Printf(" - %v\n",poke.Pokemon.Name)
 	}
 	return nil
 }
