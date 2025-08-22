@@ -7,29 +7,75 @@ import (
 	"net/http"
 	"net/url"
 	"io"
+	"math/rand"
 	"github.com/pierrefoulquie/pokedexcli/internal/pokecache"
 )
 
 const BASE_URL = "https://pokeapi.co/api/v2/location-area/"
 const POKE_URL = "https://pokeapi.co/api/v2/pokemon/"
+const MAX_LVL = 700
 
 func NewClient(base_url string, interval time.Duration) (*PokeAPIClient, error){
 	client := PokeAPIClient{}
 	client.baseURL = base_url
 	client.Enc = Encounters{}
 	client.cache =  pokecache.NewCache(interval)
+	client.Pokedex = (map[string]Pokemon{})
 	if err:= client.FetchBaseLocationArea(); err!=nil{
 		return &client, err
 	}
 	return &client, nil
 }
 
+func (c *PokeAPIClient) ThrowPokeball(poke Pokemon) error{
+	if _,ok := c.Pokedex[poke.Name]; !ok{
+		fmt.Printf("Throwing a Pokeball at %v...\n", poke.Name)
+		try := rand.Intn(MAX_LVL)
+		fmt.Printf("Player's strength: %v\n", try)
+		fmt.Printf("Pokemons's resistance: %v\n", poke.Xp)
+		if try >= poke.Xp{
+			c.Pokedex[poke.Name] = poke
+			fmt.Printf("%v has been captured!\n", poke.Name)
+			fmt.Println("You may now inspect it with the inspect command")
+		}else{
+			fmt.Printf("%v escaped!\n", poke.Name)
+		}
+		return nil
+	}
+	fmt.Printf("%v already owned.\n", poke.Name)
+	return nil
+}
+
+func (c *PokeAPIClient) FetchPokemonsList(url string) error{
+	if val, ok:= c.cache.Get(url); ok{
+		if err := json.Unmarshal(val, &c.Res); err!=nil{
+			return err
+		}
+		return nil
+	}
+
+	res, err := http.Get(url)
+	if err!=nil{
+		return err
+	}
+	defer res.Body.Close()
+	val,err := io.ReadAll(res.Body)
+	if err!=nil{
+		return err
+	}
+	marshErr := json.Unmarshal(val, &c.PokeRes)
+	if marshErr!=nil{
+		return marshErr
+	}
+	c.cache.Add(url, val)
+	return nil
+}
+
 func (c *PokeAPIClient) FetchPokemon(poke string) error{
 	endpoint := POKE_URL+poke
-	fmt.Println(endpoint)
 
 	if val, ok:= c.cache.Get(endpoint); ok{
-		if err := json.Unmarshal(val, &c.pokemon); err!=nil{
+		if err := json.Unmarshal(val, &c.Pokemon); err!=nil{
 			return err
 		}
 	//if not, http request and unmarshal
@@ -48,12 +94,10 @@ func (c *PokeAPIClient) FetchPokemon(poke string) error{
 		c.cache.Add(endpoint, val)
 
 		//unmarshal the data
-		marshErr := json.Unmarshal(val, &c.pokemon)
+		marshErr := json.Unmarshal(val, &c.Pokemon)
 		if marshErr!=nil{
 			return marshErr
 		}
-		fmt.Printf("Name : %v\n",c.pokemon.Name)
-		fmt.Printf("Level : %v\n",c.pokemon.Xp)
 	}
 	return nil
 }

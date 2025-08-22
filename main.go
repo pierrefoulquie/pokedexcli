@@ -33,6 +33,10 @@ func commandHelp(c *pokeapi.PokeAPIClient, arg0 string) error{
 	fmt.Println("help: Displays a help message")
 	fmt.Println("map: Displays 20  next pokeworld locations")
 	fmt.Println("mapb: Displays 20 previous pokeworld locations")
+	fmt.Println("explore: Displays pokemons presents in the area")
+	fmt.Println("catch: Throw a Pokeball")
+	fmt.Println("Shows informations about an owned Pokemon")
+	fmt.Println("Displays pokedex content")
 	fmt.Println("exit: Exit the Pokedex")
 	return nil
 }
@@ -89,20 +93,64 @@ func commandExplore(c *pokeapi.PokeAPIClient, arg0 string) error{
 func commandCatch(c *pokeapi.PokeAPIClient, arg0 string) error{
 	for _, poke := range c.Enc.PokemonEncounters{
 		if poke.Pokemon.Name == arg0 {
-			fmt.Printf("Throwing a pokeball at %v...\n", arg0)
 			if err := c.FetchPokemon(arg0); err!=nil{
 				return err
 			}
+			c.ThrowPokeball(c.Pokemon)
 			return nil
 		}
 	}
 	fmt.Println("Pokemon not found")
 	return nil
 }
+
+func commandPokedex(c *pokeapi.PokeAPIClient, arg0 string) error{
+	length := len(c.Pokedex)
+	if length==0{
+		fmt.Println("Pokedex is empty.")
+		return nil
+	}
+	fmt.Println("Your Pokedex:")
+	for _,pokemon := range c.Pokedex{
+		fmt.Printf(" - %v\n", pokemon.Name)
+	}
+	return nil
+}
+
+func commandInspect(c *pokeapi.PokeAPIClient, arg0 string) error{
+	if _, ok := c.Pokedex[arg0]; !ok{
+		fmt.Println("you have not caught this pokemon")
+		return nil
+	}else{
+		poke := c.Pokedex[arg0]
+		fmt.Printf("Name: %v\n", poke.Name)
+		fmt.Printf("Height: %v\n", poke.Height)
+		fmt.Printf("Weight: %v\n", poke.Weight)
+		fmt.Println("Stats:")
+		for i:=0;i<len(poke.Stats);i++{
+			fmt.Printf(" -%v: %v\n", poke.Stats[i].Stat.Name, poke.Stats[i].BaseStat)
+		}
+		fmt.Println("Types:")
+		for i:=0;i<len(poke.Types);i++{
+			fmt.Printf(" - %v\n", poke.Types[i].Type.Name)
+		}
+		return nil
+	}
+}
 var commands = map[string]cliCommand{
+	"pokedex":{
+        name:        "pokedex",
+        description: "Displays pokedex content",
+        callback:    commandPokedex,
+	},
+	"inspect":{
+        name:        "inspect",
+        description: "Shows informations about owned Pokemons",
+        callback:    commandInspect,
+	},
 	"catch":{
         name:        "catch",
-        description: "Throw a pokeball at a pokemon",
+        description: "Throw a Pokeball at a Pokemon",
         callback:    commandCatch,
 	},
 	"explore":{
@@ -155,10 +203,10 @@ func main(){
 				fmt.Println("Error: command unknown")
 				continue
 			}
-			if (firstWord == "explore" || firstWord == "catch") && len(cleanString) < 2{
+			if (firstWord == "explore" || firstWord == "catch" || firstWord == "inspect") && len(cleanString) < 2{
 				fmt.Println("Error: missing argument")
 				continue
-			}else if firstWord == "explore" || firstWord == "catch"{
+			}else if firstWord == "explore" || firstWord == "catch" || firstWord == "inspect"{
 				arg0 = strings.ToLower(cleanString[1])
 			}
 			if err := commands[firstWord].callback(client, arg0); err!=nil{
