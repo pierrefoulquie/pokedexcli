@@ -7,8 +7,8 @@ type PokeAPIClient struct{
 	Res			LocationResponse
 	Enc			Encounters
 	cache		*pokecache.Cache
+	pokemon		Pokemon
 }
-
 
 type Location struct{
 	Name 	string	`json:"name"`
@@ -26,10 +26,15 @@ type Encounters struct {
 }
 
 type PokemonEncounter struct {
-	Pokemon Pokemon `json:"pokemon"`
+	Pokemon PokeEncounter `json:"pokemon"`
 }
 
-type Pokemon struct {
+type PokeEncounter struct {
 	Name string `json:"name"`
 	URL  string `json:"url"` 
+}
+
+type Pokemon struct{
+	Name 	string `json:"name"`
+	Xp  	int 	`json:"base_experience"` 
 }

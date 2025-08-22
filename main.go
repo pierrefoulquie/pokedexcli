@@ -89,7 +89,10 @@ func commandExplore(c *pokeapi.PokeAPIClient, arg0 string) error{
 func commandCatch(c *pokeapi.PokeAPIClient, arg0 string) error{
 	for _, poke := range c.Enc.PokemonEncounters{
 		if poke.Pokemon.Name == arg0 {
-			fmt.Printf("Throwing a pokeball at %v\n", arg0)
+			fmt.Printf("Throwing a pokeball at %v...\n", arg0)
+			if err := c.FetchPokemon(arg0); err!=nil{
+				return err
+			}
 			return nil
 		}
 	}
